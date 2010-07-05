@@ -1,12 +1,10 @@
 ---
-postfix:
-  path: /tmp/foo
-  patterns:
-    one: 
-      regex: /a/
-      callback: puts "pattern one" 
-    two:
-      regex: /b/
-      callback: puts "pattern two"
-stupidone:
-  path: /tmp/stupid
+  test:
+    path: /tmp/foo
+    patterns:
+      one: 
+        regex: a
+        callback: puts "pattern one" 
+      two:
+        regex: b
+        callback: puts "pattern two"

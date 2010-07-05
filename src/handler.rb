@@ -1,23 +1,28 @@
 module Handler
   require 'strscan'
+  Dir["callbacks/*.rb"].each {|file| require file }
+  
+  def initialize *args
+    raise "config.yml is not valid or does not exists" unless args[0] and args[0][:config]
+    @config = args[0][:config]
+  end
 
   def receive_data data
-    puts data
+    trigger_callbacks data
   end
   
-  def config(path)
-    config_file = YAML.load_file('config.yml')
-    config_file.each{|key,value| return config_file[key] if value["path"] == path}
-  end
+  protected
   
-  def trigger_callbacks string, config
-    config["patterns"].each do |key,value|
-      matches = 0
-      while(string.scan("/#{key["regex"]}/"))
-        matches += 1 
+  def trigger_callbacks string
+    @config["patterns"].each do |key,value|
+      string.scan(/#{@config["patterns"][key]["regex"]}/).each do |match|
+        eval(@config["patterns"][key]["callback"])
       end
-      matches.times eval(key["callback"])
     end
+  end
+  
+  def test_callback match
+    puts "pattern matched: #{match}"
   end
   
 end
