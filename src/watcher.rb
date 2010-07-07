@@ -4,19 +4,19 @@
 #   Log Watcher is a simple log watcher with event machine.
 #
 # == Examples
-#   This command runs the mailer daemon in the background
-#     maileed
+#   This command runs log watcher daemon in the background
+#     watcher
 #
 #   This command reads the configuration from an alternate file:
-#     maileed -c config_file
+#     watcher -c config_file
 #
 #   Here we run in the foreground
-#     maileed -f
+#     watcher -f
 #
 # == Usage 
-#   maileed [options] -c config_file
+#   watcher [options]
 #
-#   For help use: maileed -h
+#   For help use: watcher -h
 #
 # == Options
 #   -h, --help          Displays help message
@@ -37,19 +37,121 @@
 
 
 require 'optparse'
-require "bundler"
-Bundler.setup
 require 'rubygems'
 require 'yaml'
-require 'eventmachine'
-
+require 'ostruct'
+require "bundler"
+Bundler.setup
+Bundler.require
 require 'src/handler'
 
-config_file = YAML.load_file('config.yml')
+class Watcher
 
+  VERSION = '0.0.1'
 
-EM.run {
-  config_file.each do |key,value|
-    EM.popen("tail -f #{config_file[key]["path"]}", Handler, {:config=> config_file[key]})
+  attr_reader :options
+ 
+  def initialize(arguments, stdin)
+    @arguments = arguments
+    @stdin = stdin
+    
+    # Set default options
+    @options = OpenStruct.new
+    @options.config_file = 'config.yml'
+    @options.verbose = false
+    @options.log_file = false
+    @options.pid_file = 'watcher.pid'
+    @options.foreground = false
+    
+    @config = nil
+    @pid_file = nil
   end
-}
+  
+  def run
+      parse_options      
+      set_logger      
+      be_verbose    
+      read_config
+      
+      # if -f is not present we fork into the background and write maileed.pid
+      @options.foreground ? process_command : daemonize
+      @log.close  
+  end
+  
+  protected
+  
+  def remove_pid
+    if !@pid_file.nil? and File.exist? @pid_file
+      @log.info "Removing pid file #{@pid_file}..." 
+      File.unlink @pid_file
+    end
+  end
+
+  def read_config    
+    begin
+      @config = YAML.load_file( @options.config_file )       
+    rescue => e      
+      @log.fatal "Error reading config file #{@options.config_file}: #{e.inspect}"
+      exit
+    end
+  end
+  
+  def set_logger
+    require 'logger'
+    if @options.log_file.nil?
+      @log = Logger.new(STDERR)
+    else
+      @log = Logger.new(@options.log_file, 'daily')
+    end
+    @log.level = (@options.verbose ? Logger::INFO : Logger::WARN)
+  end
+  
+  def daemonize
+    begin
+      @pid_file = @options.pid_file 
+      pid = fork do
+        process_command
+      end
+      File.open(@pid_file, 'w+'){|f| f.write pid.to_s }
+      Process.detach(pid)
+    rescue Exception => e
+      @log.fatal "Error while daemonizing: #{e.inspect}"
+      exit
+    end
+  end
+  
+  def parse_options
+    opts = OptionParser.new 
+    opts.on('-v', '--version')            { puts "watcher version #{VERSION}" ; exit 0 }
+    opts.on('-h', '--help')               { puts opts; exit 0  }
+    opts.on('-V', '--verbose')            { @options.verbose = true }  
+    opts.on('-f', '--foreground')         { @options.foreground = true }
+    opts.on('-l', '--log log_file')       { |log_file| @options.log_file = log_file }
+    opts.on('-p', '--pid pid_file')       { |pid_file| @options.pid_file = pid_file }
+    opts.on('-c', '--conf config_file')   { |conf| @options.config_file = conf }
+
+    opts.parse!(@arguments)
+  end
+  
+  def be_verbose
+    @log.info "Start at #{DateTime.now}"
+    @log.info "Options:\n"
+
+    @options.marshal_dump.each do |name, val|        
+      @log.info "  #{name} = #{val}"
+    end
+  end  
+
+
+  def process_command
+    EM.run {
+      @config.each do |key,value|
+        EM.popen("tail -f #{@config[key]["path"]}", Handler, {:config=> @config[key]})
+      end
+    }
+  end
+    
+end
+
+app = Watcher.new(ARGV, STDIN)
+app.run

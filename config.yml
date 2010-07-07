@@ -1,10 +1,10 @@
 ---
-  test:
+  postfix:
     path: /tmp/foo
     patterns:
       one: 
-        regex: a
-        callback: puts "pattern one" 
-      two:
-        regex: b
-        callback: puts "pattern two"
+        # .*to=<[a-z0-9\.\_\-]*@([a-z\.\-\_]*)> # to get the domain of the email
+        # .*(?=Gr[ae]y\s?listed|gr[ae]y\s?listing).* # to match the graylist patterns
+        regex: (.*to=<[a-z0-9\.\_\-]*@([a-z\.\-\_]*)>.*(?=Gr[ae]y\s?listed|gr[ae]y\s?listing).*)
+        regex_case_insensitive: true
+        callback: MaileeCallbacks.greylist match

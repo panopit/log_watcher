@@ -15,7 +15,8 @@ module Handler
   
   def trigger_callbacks string
     @config["patterns"].each do |key,value|
-      string.scan(/#{@config["patterns"][key]["regex"]}/).each do |match|
+      regex = Regexp.compile(@config["patterns"][key]["regex"],@config["patterns"][key]["regex_case_insensitive"])
+      string.scan(regex).each do |match|
         eval(@config["patterns"][key]["callback"])
       end
     end
