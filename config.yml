@@ -7,4 +7,6 @@
         # .*(?=Gr[ae]y\s?listed|gr[ae]y\s?listing).* # to match the graylist patterns
         regex: (.*to=<[a-z0-9\.\_\-]*@([a-z\.\-\_]*)>.*(?=Gr[ae]y\s?listed|gr[ae]y\s?listing).*)
         regex_case_insensitive: true
-        callback: MaileeCallbacks.greylist match
+        callback: MaileeCallbacks.greylist match, @log
+        # in callback you can receive the match of your regex passing match as a parameter of your function
+        # also you can write things on the log with the object @log

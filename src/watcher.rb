@@ -59,7 +59,7 @@ class Watcher
     @options = OpenStruct.new
     @options.config_file = 'config.yml'
     @options.verbose = false
-    @options.log_file = false
+    @options.log_file = 'watcher.log'
     @options.pid_file = 'watcher.pid'
     @options.foreground = false
     
@@ -67,8 +67,8 @@ class Watcher
     @pid_file = nil
   end
   
-  def run
-      parse_options      
+  def run    
+      parse_options            
       set_logger      
       be_verbose    
       read_config
@@ -97,7 +97,7 @@ class Watcher
   end
   
   def set_logger
-    require 'logger'
+    require 'logger'    
     if @options.log_file.nil?
       @log = Logger.new(STDERR)
     else
@@ -146,9 +146,16 @@ class Watcher
   def process_command
     EM.run {
       @config.each do |key,value|
-        EM.popen("tail -f #{@config[key]["path"]}", Handler, {:config=> @config[key]})
+        compile_regexs @config[key]
+        EM.popen("tail -f #{@config[key]["path"]}", Handler, {:config=> @config[key], :log => @log})
       end
     }
+  end
+  
+  def compile_regexs config
+    config["patterns"].each do |key,value|
+      config["patterns"][key]["regex"] = Regexp.compile(config["patterns"][key]["regex"],config["patterns"][key]["regex_case_insensitive"])
+    end
   end
     
 end

@@ -5,6 +5,7 @@ module Handler
   def initialize *args
     raise "config.yml is not valid or does not exists" unless args[0] and args[0][:config]
     @config = args[0][:config]
+    @log = args[0][:log]
   end
 
   def receive_data data
@@ -15,15 +16,10 @@ module Handler
   
   def trigger_callbacks string
     @config["patterns"].each do |key,value|
-      regex = Regexp.compile(@config["patterns"][key]["regex"],@config["patterns"][key]["regex_case_insensitive"])
-      string.scan(regex).each do |match|
+      string.scan(@config["patterns"][key]["regex"]).each do |match|
         eval(@config["patterns"][key]["callback"])
       end
     end
-  end
-  
-  def test_callback match
-    puts "pattern matched: #{match}"
   end
   
 end
