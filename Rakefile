@@ -28,7 +28,7 @@ task :test do
 =end
   
   verbose(false) do
-    Rake.run_tests 'tests/*test.rb'
+    Rake.run_tests 'tests/*_test.rb'
   end
 =begin  
   Process.kill pid    
