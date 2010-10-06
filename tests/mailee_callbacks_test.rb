@@ -1,10 +1,7 @@
 class MaileeCallbacksTest < Test::Unit::TestCase
   
   DEFAULT_SLEEP_TIME = 300
-  require 'eventmachine'
-  require 'em-redis'
-  require 'yajl'
-  
+    
   def setup
     @m1 = "Jun 14 06:10:49 #{`hostname`.chomp} postfix/smtp[19812]: 6B31141CBE: to=<afin@webcenter.com.br>, relay=ostrich.birdsnet.com.br[189.91.32.6]:25, delay=1.1, delays=0.09/0/0.87/0.15, dsn=4.0.0, status=deferred (host ostrich.birdsnet.com.br[189.91.32.6] said: 450 Rcpt to <> - You are greylisted. Try again later (in reply to RCPT TO command))"
     @m2 = "Jun 14 09:23:20 #{`hostname`.chomp} l0/smtp[30991]: 3509E41CC0: host mx2.mdbrasil.com.br[201.71.240.9] said: 454 Falha tempor?ria, pol?tica SoftFail (greylisting). (#5.7.1) (in reply to RCPT TO command)"
@@ -41,10 +38,9 @@ class MaileeCallbacksTest < Test::Unit::TestCase
     @redis = Redis::Namespace.new(msg[:instance_name], :redis => Redis.new)
     @redis.del(msg[:mx])
     MaileeCallbacks.greylist @m1, nil
-    r = @redis.get(msg[:mx])
-    r = Yajl::Parser.parse(r)
+    r = Marshal.load @redis.get(msg[:mx])
     t = Time.new
-    assert_not_nil r["greylisted_until"]
+    assert_not_nil r[:greylisted_until]
     @redis.del(msg[:mx])
   end
     #nil
@@ -65,12 +61,12 @@ class MaileeCallbacksTest < Test::Unit::TestCase
     msg = MaileeCallbacks.parse_match @m1
     @redis = Redis::Namespace.new(msg[:instance_name], :redis => Redis.new)
     hash = {:a => [0,1,2], :b => 'aaa'}
-    @redis.set(msg[:mx], Yajl::Encoder.encode(hash))
+    @redis.set(msg[:mx], Marshal.dump(hash))
     MaileeCallbacks.greylist @m1, nil
-    hash_new = Yajl::Parser.parse @redis.get(msg[:mx])
-    assert_equal [0,1,2], hash_new["a"]
-    assert_equal 'aaa', hash_new["b"]
-    assert_not_nil hash_new["greylisted_until"]
+    hash_new = Marshal.load @redis.get(msg[:mx])
+    assert_equal [0,1,2], hash_new[:a]
+    assert_equal 'aaa', hash_new[:b]
+    assert_not_nil hash_new[:greylisted_until]
     @redis.del(msg[:mx])
   end
   
@@ -87,6 +83,21 @@ class MaileeCallbacksTest < Test::Unit::TestCase
     assert_nil @redis4.get msg3[:mx]
     @redis3.del msg3[:mx]
     @redis4.del msg3[:mx]
+  end
+  
+  def test_key_should_expire_when_the_last_message_sent_expire
+    hash = {:a => [0,1,2], :b => 'aaa', :messages_sent => [Time.now - 3600 + 3]}
+    msg = MaileeCallbacks.parse_match @mexp
+    @redis = Redis::Namespace.new(msg[:instance_name], :redis => Redis.new)
+    @redis.set(msg[:mx], Marshal.dump(hash))
+    MaileeCallbacks.greylist @mexp, nil
+    assert_not_nil @redis.get(msg[:mx])
+    sleep 2
+    assert_not_nil @redis.get(msg[:mx])
+    sleep 2
+    assert_nil @redis.get(msg[:mx])
+        
+    @redis.del(msg[:mx])
   end
   
 end
