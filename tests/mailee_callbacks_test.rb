@@ -96,7 +96,6 @@ class MaileeCallbacksTest < Test::Unit::TestCase
     assert_not_nil @redis.get(msg[:mx])
     sleep 2
     assert_nil @redis.get(msg[:mx])
-        
     @redis.del(msg[:mx])
   end
   
