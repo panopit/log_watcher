@@ -40,14 +40,15 @@ class MaileeCallbacks
   end
   
   def self.hold mx, time
-    r = (Marshal.load @redis.get(mx)) rescue {}
-    hash = {:greylisted_until => Time.now + time}
-    if r[:messages_sent] and (r[:messages_sent].last + THRESHOLD_EXPIRE) >= hash[:greylisted_until]
-      expire = r[:messages_sent].last + THRESHOLD_EXPIRE - Time.now 
-    else
-      expire = time 
-    end
-    @redis.setex(mx, expire.to_i, Marshal.dump(hash.merge(r)))
-   end  
+    # r = (Marshal.load @redis.get(mx)) rescue {}
+    # hash = {:greylisted_until => Time.now + time}
+    # if r[:messages_sent] and (r[:messages_sent].last + THRESHOLD_EXPIRE) >= hash[:greylisted_until]
+    #   expire = r[:messages_sent].last + THRESHOLD_EXPIRE - Time.now 
+    # else
+    #   expire = time 
+    # end
+    # @redis.setex(mx, expire.to_i, Marshal.dump(hash.merge(r)))
+    @redis.setex(mx, time, true)
+  end  
   
 end
