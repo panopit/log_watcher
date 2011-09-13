@@ -1,9 +1,8 @@
 ---
-  postfix:
-    path: /tmp/foo
-    patterns:
-      one: 
-        regex: 4\.7\.\d|gr[ae]y\s?list|spam|policy
-        callback: MaileeCallbacks.greylist match, @log
-        # in callback you can receive the match of your regex passing match as a parameter of your function
-        # also you can write things on the log with the object @log
+  database:
+    host: localhost
+    port: 5432
+    dbname: mailee_test
+    user: log_watcher
+    password: 1234
+    

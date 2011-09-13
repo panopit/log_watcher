@@ -43,7 +43,9 @@ require 'ostruct'
 require "bundler"
 Bundler.setup
 Bundler.require
-require 'src/handler'
+require 'eventmachine'
+require 'eventmachine-tail'
+require './src/mailee'
 
 class Watcher
 
@@ -128,7 +130,7 @@ class Watcher
     opts.on('-f', '--foreground')         { @options.foreground = true }
     opts.on('-l', '--log log_file')       { |log_file| @options.log_file = log_file }
     opts.on('-p', '--pid pid_file')       { |pid_file| @options.pid_file = pid_file }
-    opts.on('-c', '--conf config_file')   { |conf| @options.config_file = conf }
+    #opts.on('-c', '--conf config_file')   { |conf| @options.config_file = conf }
 
     opts.parse!(@arguments)
   end
@@ -144,19 +146,12 @@ class Watcher
 
 
   def process_command
-    EM.run {
-      @config.each do |key,value|
-        compile_regexs @config[key]
-        EM.popen("tail -f #{@config[key]["path"]}", Handler, {:config=> @config[key], :log => @log})
-      end
-    }
-  end
-  
-  def compile_regexs config
-    config["patterns"].each do |key,value|
-      config["patterns"][key]["regex"] = Regexp.compile(config["patterns"][key]["regex"],config["patterns"][key]["regex_case_insensitive"])
+    EventMachine.run do
+        EventMachine::file_tail(@config["paths"]["access_log"], Mailee::Access)  
+#        EventMachine::file_tail(@config["paths"]["click_log"], Mailee::Click)  
     end
   end
+  
     
 end
 

@@ -1,6 +1,6 @@
 module Handler
   require 'strscan'
-  Dir["callbacks/*.rb"].each {|file| require file }
+  Dir["./callbacks/*.rb"].each {|file| require file }
   
   def initialize *args
     raise "config.yml is not valid or does not exists" unless args[0] and args[0][:config]

@@ -1,0 +1,17 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    eventmachine (0.12.10)
+    eventmachine-tail (0.6.3)
+      eventmachine
+    pg (0.11.0)
+    rake (0.8.7)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  eventmachine (~> 0.12.10)
+  eventmachine-tail (~> 0.6.3)
+  pg
+  rake

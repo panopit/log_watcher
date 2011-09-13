@@ -5,35 +5,29 @@ end
 task :test do 
   require 'rake/runtest'
 
-=begin
   yaml = '---
-  test:
-    path: /tmp/foo
-    patterns:
-      one: 
-        regex: a
-        callback: puts "pattern one" 
-      two:
-        regex: b
-        callback: puts "pattern two"'
+  database:
+    host: localhost
+    port: 5432
+    dbname: mailee_test
+    user: log_watcher
+    password: 1234
+    '
   FileUtils.mv('config.yml','original.config.yml')
   File.open('config.yml', 'w'){|f| f.write yaml  }
-  File.open('tmp.log', 'w'){|f| f.write "" }
-  
-  pid = fork do
-    puts "PROCESSO filho" 
-    require 'src/watcher'
-  end
-  puts "PROCESSO PAI #{pid}" 
-=end
+  FileUtils.touch("test.log")
+
+  #pid = fork do
+    #puts "PROCESSO filho" 
+    #require 'src/watcher'
+  #end
+  #puts "PROCESSO PAI #{pid}" 
   
   verbose(false) do
     Rake.run_tests 'tests/*_test.rb'
   end
-=begin  
-  Process.kill pid    
-  FileUtils.rm('confg.yml')
-  FileUtils.rm('tmp.log')
-  FileUtils.mv('original.config.yml','config.yml')  
-=end
+  #Process.kill pid    
+  #FileUtils.rm('config.yml')
+  #FileUtils.rm('test.log')
+  #FileUtils.mv('original.config.yml','config.yml')  
 end

@@ -1,5 +1,5 @@
 class HandlerClass
-  require 'src/handler.rb'
+  require './src/handler.rb'
   include Handler 
 end
 
