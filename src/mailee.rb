@@ -3,6 +3,32 @@ class Mailee
   require 'pg'
   require 'uri'
   require 'cgi'
+  
+  class Sync 
+    def initialize(path, config, klass)
+      @path = path
+      @config = config
+      @klass = klass
+      @conn = PGconn.open(@config['database'])      
+      @m = klass.new(path)
+      $0 = "Mailee Log Watcher - Sync #{klass.query_type}" 
+    end
+
+    def run
+      @initial_size = `wc -l #{@path}`.split(' ').first.to_i
+      @io = File.open(@path,'r')
+      @initial_size.times do
+        begin
+          line = @io.gets 
+          parsed = @klass.parse_line(line)
+          @m.insert_into_db_unless_exists(parsed,true)
+        rescue 
+          nil
+        end
+      end
+    end
+  end
+  
   class Stats < EventMachine::FileTail
     
     def initialize(path, startpos=-1)
@@ -16,7 +42,7 @@ class Mailee
 
     def receive_data(data)
       @buffer.extract(data).each do |line|
-        insert_into_db(parse_line(line))
+        insert_into_db(Stats.parse_line(line))
       end
     end
 
@@ -40,26 +66,43 @@ class Mailee
   end
 
   class Access < Stats
-    def insert_into_db(l)
+
+    def insert_into_db(l, unique = false)
+      unique_sql = unique ? "NOT EXISTS (SELECT 1 FROM accesses WHERE created_at = to_timestamp('#{l[0]}') AND message_id = d.message_id AND contact_id = d.contact_id AND d.id = #{Click.parse_id(l[3])} AND type = 'View')" : "true"
       @conn.exec("
         INSERT INTO accesses (message_id, contact_id, created_at, ip, user_agent_string, type) 
         SELECT message_id, contact_id, to_timestamp('#{l[0]}'), '#{l[1]}', '#{@conn.escape_string(l[2])}', 'View' 
-        FROM deliveries 
-        WHERE id = #{Access.parse_id(l[3])} AND NOT test")
-      # CRIAR indice unico para (message_id, contact_id, created_at)
+        FROM deliveries d 
+        WHERE id = #{Access.parse_id(l[3])} 
+        AND NOT test
+        AND #{unique_sql}
+        ")
+    end
+
+    def self.query_type
+      'View'
     end
 
   end
 
   class Click < Stats
-    def insert_into_db(l)
+    def insert_into_db(l, unique = false)
+      unique_sql = unique ? "NOT EXISTS (SELECT 1 FROM accesses WHERE created_at = to_timestamp('#{l[0]}') AND message_id = d.message_id AND contact_id = d.contact_id AND d.id = #{Click.parse_id(l[3])} AND type = 'Click')" : "true"
       @conn.exec("
       INSERT INTO accesses (contact_id, url_id, message_id, created_at, ip, user_agent_string, type)
       SELECT d.contact_id, u.id, d.message_id, to_timestamp('#{l[0]}'), '#{l[1]}', '#{@conn.escape_string(l[2])}', 'Click' 
       FROM deliveries d 
       JOIN urls u ON u.message_id = d.message_id 
-      WHERE d.id = #{Click.parse_id(l[3])} AND u.url = '#{@conn.escape_string(Stats.parse_url(l[3]))}' AND NOT d.test; ")
+      WHERE d.id = #{Click.parse_id(l[3])} AND u.url = '#{@conn.escape_string(Stats.parse_url(l[3]))}' 
+      AND NOT d.test
+      AND #{unique_sql}
+      ")
+    end
+
+    def self.query_type
+      'Click'
     end
   end
+
 
 end

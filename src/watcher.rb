@@ -146,9 +146,14 @@ class Watcher
 
 
   def process_command
+    $0 = 'Mailee Log Watcher'
+    raise 'Invalid Config, missing paths directives' unless @config["paths"]
+    p1 = fork {Mailee::Sync.new(@config["paths"]["access_log"], @config, Mailee::Access).run}
+    p2 = fork {Mailee::Sync.new(@config["paths"]["click_log"], @config, Mailee::Click).run}
+    
     EventMachine.run do
         EventMachine::file_tail(@config["paths"]["access_log"], Mailee::Access)  
-#        EventMachine::file_tail(@config["paths"]["click_log"], Mailee::Click)  
+        EventMachine::file_tail(@config["paths"]["click_log"], Mailee::Click)  
     end
   end
   

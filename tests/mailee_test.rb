@@ -42,6 +42,22 @@ class MaileeTest < Test::Unit::TestCase
     assert_equal '888', r["contact_id"]
   end
 
+  def test_should_not_insert_duplicate_values
+    result = ["1315863905.666","192.168.56.1","curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5","/go/view/999"]    
+    @m = Mailee::Access.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]
+    assert_equal 1, r.to_i
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]
+    assert_equal 2, r.to_i
+
+    @m.insert_into_db(result,true)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]
+    assert_equal 2, r.to_i
+
+  end
+
   def test_should_not_insert_access_from_test
     @conn.exec("UPDATE deliveries SET test = true WHERE id = 999")
     result = ["1315863905.666","192.168.56.1","curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5","/go/view/999"]    
@@ -69,6 +85,21 @@ class MaileeTest < Test::Unit::TestCase
     assert_equal '888', r["contact_id"]
     assert_equal '777', r["url_id"]
   end
+
+  def test_should_not_insert_twice_the_same_click_line
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
+    assert_equal 1, r.to_i
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
+    assert_equal 2, r.to_i
+    @m.insert_into_db(result,true)
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
+    assert_equal 2, r.to_i
+  
+  end
   
   def test_should_not_insert_click_from_test
     @conn.exec("UPDATE deliveries SET test = true WHERE id = 999")    
@@ -77,6 +108,27 @@ class MaileeTest < Test::Unit::TestCase
     @m.insert_into_db(result)
     r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]
     assert_equal 0,r["count"].to_i
+  end
+
+  def test_should_sync_files
+    @conn.exec("INSERT into deliveries (id, message_id, contact_id, smtp_relay_id, email) VALUES (998,999,888,999,'aaa@gmail.com');")
+    @conn.exec("INSERT into deliveries (id, message_id, contact_id, smtp_relay_id, email) VALUES (997,999,888,999,'aaa@gmail.com');")
+    result = ["1315941774.461","192.168.56.1","GET /go/view/999 HTTP/1.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1"]    
+    result2 = ["1315941773.461","192.168.56.1","GET /go/view/998 HTTP/1.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1"]    
+    result3 = ["1315941772.461","192.168.56.1","GET /go/view/997 HTTP/1.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1"]    
+    File.open("sync.log",'w') {|f| f.write([result3.join('|'), result2.join('|'), result.join('|')].join("\n"))}
+    
+    Mailee::Access.new('sync.log').insert_into_db(Mailee::Access.parse_line(result.join('|')))
+
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"].to_i
+    assert_equal r, 1
+
+    m = Mailee::Sync.new('sync.log', @config, Mailee::Access)
+    m.run
+
+    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"].to_i
+    assert_equal r, 3 
+    FileUtils.rm('sync.log')
   end
 
   def setup_files
@@ -102,7 +154,7 @@ class MaileeTest < Test::Unit::TestCase
   end
 
   def create_delivery
-    @conn.exec("INSERT into clients (id,name,subdomain) VALUES ('999','acme','acme')")
+   @conn.exec("INSERT into clients (id,name,subdomain) VALUES ('999','acme','acme')")
     @conn.exec("INSERT into messages (id, client_id, title, subject, from_name, from_email, reply_email) VALUES ('999','999','A','A','A','aaa@softa.com.br','aaa@softa.com.br');")
     @conn.exec("INSERT into contact_status (id,name) VALUES (0,'a');") rescue nil
     @conn.exec("INSERT into contacts (id, client_id, email) VALUES (888,999, 'aaaaa@softa.com.br');")
@@ -118,7 +170,7 @@ class MaileeTest < Test::Unit::TestCase
   def delete_delivery
     @conn.exec("DELETE FROM accesses WHERE message_id = 999")
     @conn.exec("DELETE FROM urls WHERE id = 777")
-    @conn.exec("DELETE FROM deliveries WHERE id = 999")
+    @conn.exec("DELETE FROM deliveries WHERE id in (999,998,997)")
     @conn.exec("DELETE FROM smtp_relays WHERE id = 999")
     @conn.exec("DELETE FROM messages_lists WHERE id = 999")
     @conn.exec("DELETE FROM lists_contacts WHERE id = 999")
