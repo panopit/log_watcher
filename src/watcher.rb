@@ -60,7 +60,6 @@ class Watcher
     # Set default options
     @options = OpenStruct.new
     @options.config_file = 'config.yml'
-    @options.verbose = false
     @options.log_file = 'watcher.log'
     @options.pid_file = 'watcher.pid'
     @options.foreground = false
@@ -69,22 +68,30 @@ class Watcher
     @pid_file = nil
   end
   
-  def run    
+  def run
+      check_pid
       parse_options            
-      set_logger      
-      be_verbose    
       read_config
       
       # if -f is not present we fork into the background and write maileed.pid
       @options.foreground ? process_command : daemonize
-      @log.close  
   end
   
   protected
   
+  def check_pid
+    pid = File.read(@options.pid_file).to_i
+    begin
+      Process.kill(0,pid)
+    rescue
+      return
+    end
+    raise "Mailee Log Watcher is already running"
+  end
+  
   def remove_pid
     if !@pid_file.nil? and File.exist? @pid_file
-      @log.info "Removing pid file #{@pid_file}..." 
+      puts "Removing pid file #{@pid_file}..." 
       File.unlink @pid_file
     end
   end
@@ -93,20 +100,11 @@ class Watcher
     begin
       @config = YAML.load_file( @options.config_file )       
     rescue => e      
-      @log.fatal "Error reading config file #{@options.config_file}: #{e.inspect}"
+      puts "Error reading config file #{@options.config_file}: #{e.inspect}"
       exit
     end
   end
   
-  def set_logger
-    require 'logger'    
-    if @options.log_file.nil?
-      @log = Logger.new(STDERR)
-    else
-      @log = Logger.new(@options.log_file, 'daily')
-    end
-    @log.level = (@options.verbose ? Logger::INFO : Logger::WARN)
-  end
   
   def daemonize
     begin
@@ -117,7 +115,7 @@ class Watcher
       File.open(@pid_file, 'w+'){|f| f.write pid.to_s }
       Process.detach(pid)
     rescue Exception => e
-      @log.fatal "Error while daemonizing: #{e.inspect}"
+      puts "Error while daemonizing: #{e.inspect}"
       exit
     end
   end
@@ -126,23 +124,14 @@ class Watcher
     opts = OptionParser.new 
     opts.on('-v', '--version')            { puts "watcher version #{VERSION}" ; exit 0 }
     opts.on('-h', '--help')               { puts opts; exit 0  }
-    opts.on('-V', '--verbose')            { @options.verbose = true }  
+    #opts.on('-V', '--verbose')            { @options.verbose = true }  
     opts.on('-f', '--foreground')         { @options.foreground = true }
-    opts.on('-l', '--log log_file')       { |log_file| @options.log_file = log_file }
+    #opts.on('-l', '--log log_file')       { |log_file| @options.log_file = log_file }
     opts.on('-p', '--pid pid_file')       { |pid_file| @options.pid_file = pid_file }
     #opts.on('-c', '--conf config_file')   { |conf| @options.config_file = conf }
 
     opts.parse!(@arguments)
   end
-  
-  def be_verbose
-    @log.info "Start at #{DateTime.now}"
-    @log.info "Options:\n"
-
-    @options.marshal_dump.each do |name, val|        
-      @log.info "  #{name} = #{val}"
-    end
-  end  
 
 
   def process_command
