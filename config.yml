@@ -1,4 +1,7 @@
 ---
+  paths:
+    access_log: /var/log/nginx/mailee_view.log
+    click_log: /var/log/nginx/mailee_click.log
   database:
     host: localhost
     port: 5432

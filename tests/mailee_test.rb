@@ -29,6 +29,10 @@ class MaileeTest < Test::Unit::TestCase
     assert_equal 'http://mailee.me?name=john&code=123', Mailee::Stats.parse_url('/go/click/24234234?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123')
   end
 
+  def test_should_parse_key
+    assert_equal '3123', Mailee::Stats.parse_key('/go/click/24234234?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123')
+  end
+
   def test_should_insert_access
     result = ["1315863905.666","192.168.56.1","curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5","/go/view/999"]    
     @m = Mailee::Access.new("test.log")
@@ -50,11 +54,7 @@ class MaileeTest < Test::Unit::TestCase
     assert_equal 1, r.to_i
     @m.insert_into_db(result)
     r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]
-    assert_equal 2, r.to_i
-
-    @m.insert_into_db(result,true)
-    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]
-    assert_equal 2, r.to_i
+    assert_equal 1, r.to_i
 
   end
 
@@ -73,7 +73,7 @@ class MaileeTest < Test::Unit::TestCase
   end
 
   def test_should_insert_click_line
-    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
     @m = Mailee::Click.new("test.log")
     @m.insert_into_db(result)
     r = @conn.exec("SELECT * FROM accesses WHERE message_id = 999")[0]
@@ -87,17 +87,14 @@ class MaileeTest < Test::Unit::TestCase
   end
 
   def test_should_not_insert_twice_the_same_click_line
-    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
     @m = Mailee::Click.new("test.log")
     @m.insert_into_db(result)
     r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
     assert_equal 1, r.to_i
     @m.insert_into_db(result)
     r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
-    assert_equal 2, r.to_i
-    @m.insert_into_db(result,true)
-    r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]["count"]    
-    assert_equal 2, r.to_i
+    assert_equal 1, r.to_i
   
   end
   
@@ -156,7 +153,7 @@ class MaileeTest < Test::Unit::TestCase
   def create_delivery
    @conn.exec("INSERT into clients (id,name,subdomain) VALUES ('999','acme','acme')")
     @conn.exec("INSERT into messages (id, client_id, title, subject, from_name, from_email, reply_email) VALUES ('999','999','A','A','A','aaa@softa.com.br','aaa@softa.com.br');")
-    @conn.exec("INSERT into contact_status (id,name) VALUES (0,'a');") rescue nil
+    @conn.exec("INSERT into contact_status (id,name) VALUES (0,'a'),(-5,'b'),(2,'c'),(3,'d'),(4,'e');") rescue nil
     @conn.exec("INSERT into contacts (id, client_id, email) VALUES (888,999, 'aaaaa@softa.com.br');")
     @conn.exec("INSERT into lists (id, client_id, name) VALUES (999,999,'a');")
     @conn.exec("INSERT into lists_contacts (id, list_id, contact_id) VALUES (999,999,888);")
@@ -177,6 +174,7 @@ class MaileeTest < Test::Unit::TestCase
     @conn.exec("DELETE FROM lists WHERE id = 999")
     @conn.exec("DELETE FROM contacts WHERE id = 888")
     @conn.exec("DELETE FROM messages WHERE id = 999")
+    @conn.exec("DELETE FROM contact_status")
     @conn.exec("DELETE FROM clients WHERE id = 999")
     @conn.exec("DELETE FROM delivery_status WHERE id = 0")
   end

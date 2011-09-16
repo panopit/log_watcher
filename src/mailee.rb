@@ -21,7 +21,7 @@ class Mailee
         begin
           line = @io.gets 
           parsed = @klass.parse_line(line)
-          @m.insert_into_db_unless_exists(parsed,true)
+          @m.insert_into_db(parsed)
         rescue 
           nil
         end
@@ -63,20 +63,28 @@ class Mailee
       URI.unescape(CGI::parse(path)["url"][0])
     end
 
+    def self.parse_key(path)
+      CGI::parse(path.split('?')[1])["key"][0]
+    end
+
   end
 
   class Access < Stats
 
-    def insert_into_db(l, unique = false)
-      unique_sql = unique ? "NOT EXISTS (SELECT 1 FROM accesses WHERE created_at = to_timestamp('#{l[0]}') AND message_id = d.message_id AND contact_id = d.contact_id AND d.id = #{Click.parse_id(l[3])} AND type = 'View')" : "true"
-      @conn.exec("
-        INSERT INTO accesses (message_id, contact_id, created_at, ip, user_agent_string, type) 
-        SELECT message_id, contact_id, to_timestamp('#{l[0]}'), '#{l[1]}', '#{@conn.escape_string(l[2])}', 'View' 
-        FROM deliveries d 
-        WHERE id = #{Access.parse_id(l[3])} 
-        AND NOT test
-        AND #{unique_sql}
-        ")
+    def insert_into_db(l)
+      #unique_sql = unique ? "NOT EXISTS (SELECT 1 FROM accesses WHERE created_at = to_timestamp('#{l[0]}') AND message_id = d.message_id AND contact_id = d.contact_id AND d.id = #{Click.parse_id(l[3])} AND type = 'View')" : "true"
+      #@conn.exec("
+        #INSERT INTO accesses (message_id, contact_id, created_at, ip, user_agent_string, type) 
+        #SELECT message_id, contact_id, to_timestamp('#{l[0]}'), '#{l[1]}', '#{@conn.escape_string(l[2])}', 'View' 
+        #FROM deliveries d 
+        #WHERE id = #{Access.parse_id(l[3])} 
+        #AND NOT test
+        #AND #{unique_sql}
+        #")
+        @conn.exec(
+          "SELECT insert_access($1,$2,$3,$4)",
+          [l[0].to_f,l[1],l[2],Stats.parse_id(l[3])]
+        )
     end
 
     def self.query_type
@@ -86,17 +94,11 @@ class Mailee
   end
 
   class Click < Stats
-    def insert_into_db(l, unique = false)
-      unique_sql = unique ? "NOT EXISTS (SELECT 1 FROM accesses WHERE created_at = to_timestamp('#{l[0]}') AND message_id = d.message_id AND contact_id = d.contact_id AND d.id = #{Click.parse_id(l[3])} AND type = 'Click')" : "true"
-      @conn.exec("
-      INSERT INTO accesses (contact_id, url_id, message_id, created_at, ip, user_agent_string, type)
-      SELECT d.contact_id, u.id, d.message_id, to_timestamp('#{l[0]}'), '#{l[1]}', '#{@conn.escape_string(l[2])}', 'Click' 
-      FROM deliveries d 
-      JOIN urls u ON u.message_id = d.message_id 
-      WHERE d.id = #{Click.parse_id(l[3])} AND u.url = '#{@conn.escape_string(Stats.parse_url(l[3]))}' 
-      AND NOT d.test
-      AND #{unique_sql}
-      ")
+    def insert_into_db(l)
+      @conn.exec(
+        "SELECT insert_click($1,$2,$3,$4,$5,$6)",
+        [l[0],l[1],l[2],Stats.parse_id(l[3]),Stats.parse_url(l[3]),Stats.parse_key(l[3])]
+      )
     end
 
     def self.query_type
