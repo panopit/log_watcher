@@ -1,4 +1,5 @@
 *.DS_Store
 *.log
 *.pid
-*.yml
+*config.yml
+config.yml
