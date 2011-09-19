@@ -11,7 +11,7 @@ class Mailee::Stats < EventMachine::FileTail
 
   def receive_data(data)
     @buffer.extract(data).each do |line|
-      insert_into_db(Stats.parse_line(line))
+      insert_into_db(Mailee::Stats.parse_line(line))
     end
   end
 
