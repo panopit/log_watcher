@@ -135,10 +135,15 @@ class Watcher
 
 
   def process_command
-    $0 = 'Mailee Log Watcher'
+    $0 = 'mailee - log watcher'
     raise 'Invalid Config, missing paths directives' unless @config["paths"]
-    p1 = fork {Mailee::Sync.new(@config["paths"]["access_log"], @config, Mailee::Access).run}
-    p2 = fork {Mailee::Sync.new(@config["paths"]["click_log"], @config, Mailee::Click).run}
+    @conn = PGconn.open(@config['database'])
+
+    last_access = @conn.exec("SELECT EXTRACT (epoch FROM created_at) FROM accesses WHERE type='#{Mailee::Access.query_type}' ORDER BY created_at desc LIMIT 1")[0]["date_part"]
+    last_click = @conn.exec("SELECT EXTRACT (epoch FROM created_at) FROM accesses WHERE type='#{Mailee::Click.query_type}' ORDER BY created_at desc LIMIT 1")[0]["date_part"]
+
+    p1 = fork {Mailee::Sync.new(@config["paths"]["access_log"], @config, last_access, Mailee::Access).run}
+    p2 = fork {Mailee::Sync.new(@config["paths"]["click_log"], @config, last_click, Mailee::Click).run}
     
     EventMachine.run do
         EventMachine::file_tail(@config["paths"]["access_log"], Mailee::Access)  
