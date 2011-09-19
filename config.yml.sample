@@ -1,0 +1,8 @@
+---
+  database:
+    host: localhost
+    port: 5432
+    dbname: mailee_test
+    user: log_watcher
+    password: 1234
+    
