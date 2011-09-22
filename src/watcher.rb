@@ -80,6 +80,7 @@ class Watcher
   protected
   
   def check_pid
+    return unless File.exists?(@options.pid_file)
     pid = File.read(@options.pid_file).to_i
     begin
       Process.kill(0,pid)
