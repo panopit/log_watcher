@@ -17,6 +17,7 @@ class Mailee::Stats < EventMachine::FileTail
         puts "#{Time.now} EXCEPTION:"
         puts e.inspect
         puts e.backtrace.inspect
+        puts "LINE: #{line.inspect}"
       end
     end
   end
