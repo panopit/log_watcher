@@ -35,7 +35,8 @@ class Mailee::Stats < EventMachine::FileTail
   end
 
   def self.parse_url(path)
-    URI.unescape(CGI::parse(path)["url"][0])
+    u = URI.parse(path)
+    CGI::parse(u.query)["url"][0]
   end
 
   def self.parse_key(path)
