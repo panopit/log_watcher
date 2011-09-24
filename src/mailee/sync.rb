@@ -19,7 +19,9 @@ class Mailee::Sync
         parsed = @klass.parse_line(line)
         @m.insert_into_db(parsed)
       rescue => e
+        puts "#{Time.now} EXCEPTION:"
         puts e.inspect
+        puts e.backtrace.inspect
       end
     end
   end
