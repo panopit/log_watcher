@@ -45,4 +45,11 @@ class MaileeClickTest < Test::Unit::TestCase
     r = @conn.exec("SELECT count(*) FROM accesses WHERE message_id = 999")[0]
     assert_equal 0,r["count"].to_i
   end
+
+  def test_should_not_raise_a_nil_line
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999"]        
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+  end
+
 end

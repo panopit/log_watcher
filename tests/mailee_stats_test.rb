@@ -23,4 +23,13 @@ class MaileeStatsTest < Test::Unit::TestCase
     result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/24234234?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]
     assert_equal result, Mailee::Click.parse_line("1315941774.461|192.168.56.1|GET /go/click/24234234?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123 HTTP/1.1|Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1")
   end
+
+
+  def test_should_verify_valid_paths
+    p1 = "http://mailee.me/go/click/999?key=3123&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"
+    p2 = "http://mailee.me/go/click/999"
+    assert_equal true, Mailee::Stats.valid_path?(p1)
+    assert_equal false, Mailee::Stats.valid_path?(p2)
+  end
+
 end

@@ -1,5 +1,6 @@
 class Mailee::Click < Mailee::Stats
   def insert_into_db(l)
+    return unless Mailee::Stats.valid_path?(l[3])
     @conn.exec(
       "SELECT insert_click($1,$2,$3,$4,$5,$6)",
       [l[0],l[1],l[2],Mailee::Stats.parse_id(l[3]),Mailee::Stats.parse_url(l[3]),Mailee::Stats.parse_key(l[3])]

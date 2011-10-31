@@ -43,4 +43,9 @@ class Mailee::Stats < EventMachine::FileTail
     CGI::parse(path.split('?')[1])["key"][0]
   end
 
+  def self.valid_path?(path)
+    u = URI.parse(path)
+    not u.query.nil?
+  end
+
 end
