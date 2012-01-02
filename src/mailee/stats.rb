@@ -24,7 +24,7 @@ class Mailee::Stats < EventMachine::FileTail
 
   def self.parse_line(line)
     # 1315863905.666|192.168.56.1|GET /go/view/24234234 HTTP/1.1|curl/7.21.4 (universal-apple-darwin11.0) libcurl/7.21.4 OpenSSL/0.9.8r zlib/1.2.5
-    l = line.split('|')
+    l = line.encode("UTF-8", {invalid: :replace, replace: '?'} ).split('|')
     
     # [epoch, ip, user_agent, url]
     [l[0], l[1], l[3], l[2].split(' ')[1]]
@@ -35,7 +35,11 @@ class Mailee::Stats < EventMachine::FileTail
   end
 
   def self.parse_url(path)
-    u = URI.parse(path)
+    begin
+      u = URI.parse(path)
+    rescue
+      u = URI.parse(path.split('%2F%3Futm_source')[0])
+    end
     CGI::parse(u.query)["url"][0]
   end
 
@@ -44,8 +48,8 @@ class Mailee::Stats < EventMachine::FileTail
   end
 
   def self.valid_path?(path)
-    u = URI.parse(path)
+      u = URI.parse(path)
     not u.query.nil?
   end
-
+  # URI.parse(path.split('%2F%3Futm_source')[0])
 end

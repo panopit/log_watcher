@@ -32,4 +32,10 @@ class MaileeStatsTest < Test::Unit::TestCase
     assert_equal false, Mailee::Stats.valid_path?(p2)
   end
 
+  def test_should_rescue_invalid_urls
+    path = "/go/click/133233021?key=af298b&amp;url=http%3A%2F%2Forbirh.wordpress.com%2F2011%2F10%2F26%2Fprogramacao-de-janeiro%2F%3Futm_source%3DMailee%26utm_medium%3Demail%26utm_campaign%3DPrograma%25C3%25A7%25C3%25A3o%2B01%252F2012%26utm_term%3"
+    assert_equal 133233021, Mailee::Stats.parse_id(path)
+    assert_equal 'http://orbirh.wordpress.com/2011/10/26/programacao-de-janeiro', Mailee::Stats.parse_url(path)
+  end
+
 end
