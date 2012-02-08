@@ -1,5 +1,6 @@
 class Mailee::Stats < EventMachine::FileTail
-  
+  require 'geokit'
+
   def initialize(path, startpos=-1)
     super(path, startpos)
     puts "Tailing #{path}"
@@ -52,4 +53,12 @@ class Mailee::Stats < EventMachine::FileTail
     not u.query.nil?
   end
   # URI.parse(path.split('%2F%3Futm_source')[0])
+  def self.geocode(ip)
+    Geokit::Geocoders::GeoPluginGeocoder.do_geocode(ip)
+  end
+  def self.update_contact_geoinfo contact_id, geokit, conn
+    conn.exec("UPDATE contacts SET latitude = $1, longitude = $2 WHERE id = $3",
+              [geokit.lat, geokit.lng, contact_id]
+              )
+  end
 end

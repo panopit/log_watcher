@@ -1,9 +1,21 @@
+GIT
+  remote: git@github.com:joaomilho/user_agent_info.git
+  revision: 80d6fd13e3033686f19eb0f8305c1a7b4f79313f
+  specs:
+    user_agent_info (0.0.1)
+
 GEM
   remote: http://rubygems.org/
   specs:
     eventmachine (0.12.10)
     eventmachine-tail (0.6.3)
       eventmachine
+    geokit (1.6.5)
+      multi_json
+    metaclass (0.0.1)
+    mocha (0.10.3)
+      metaclass (~> 0.0.1)
+    multi_json (1.0.4)
     pg (0.11.0)
     rake (0.8.7)
 
@@ -13,5 +25,8 @@ PLATFORMS
 DEPENDENCIES
   eventmachine (~> 0.12.10)
   eventmachine-tail (~> 0.6.3)
+  geokit
+  mocha
   pg
   rake
+  user_agent_info (= 0.0.1)!

@@ -1,9 +1,18 @@
+require 'test/unit'
+require 'mocha'
+require 'ostruct'
+
 class MaileeClickTest < Test::Unit::TestCase
+  
 
   def setup
     setup_files
     @conn = PGconn.open(@config['database'])
     create_delivery
+    geokit = OpenStruct.new(country_code: nil, city: nil, lat: nil, lng: nil, state:nil )
+    Mailee::Stats.expects(:geokit).with('192.168.56.1').returns(geokit).at_least(0)
+    geokit2 = OpenStruct.new(country_code: 'US', city: 'Mountain View', lat: 37.419200897217, lng: -122.05740356445, state: 'CA' )
+    Mailee::Stats.expects(:geokit).with('8.8.8.8').returns(geokit2).at_least(0)
   end
 
   def teardown
@@ -23,6 +32,62 @@ class MaileeClickTest < Test::Unit::TestCase
     assert_equal 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1', r["user_agent_string"]
     assert_equal '888', r["contact_id"]
     assert_equal '777', r["url_id"]
+  end
+
+  def test_should_insert_click_and_record_useragentinfo
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT * FROM accesses WHERE message_id = 999")[0]
+    assert_equal r["user_agent_name"], "Chrome"
+    assert_equal r["user_agent_version"], "13"
+    assert_equal r["os"], "MacOS"
+    assert_equal r["os_version"], "Lion"
+  end
+
+  def test_should_insert_click_and_record_useragentinfo_and_geoinfo
+    result = ["1315941774.461","8.8.8.8","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT * FROM accesses WHERE message_id = 999")[0]
+    assert_equal r["user_agent_name"], "Chrome"
+    assert_equal r["user_agent_version"], "13"
+    assert_equal r["os"], "MacOS"
+    assert_equal r["os_version"], "Lion"
+    assert_equal "Mountain View", r["city"]
+    assert_equal 37.419200897217, r["latitude"].to_f
+    assert_equal -122.05740356445, r["longitude"].to_f
+    assert_equal "US", r["country_code"]
+    assert_equal "CA", r["region"]
+  end
+  def test_should_insert_click_and_record_its_geo_info
+    result = ["1315941774.461","8.8.8.8","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT * FROM accesses WHERE message_id = 999")[0]
+    assert_equal "Mountain View", r["city"]
+    assert_equal 37.419200897217, r["latitude"].to_f
+    assert_equal -122.05740356445, r["longitude"].to_f
+    assert_equal "US", r["country_code"]
+    assert_equal "CA", r["region"]
+  end
+
+  def test_should_insert_click_and_update_contact_info
+    result = ["1315941774.461","8.8.8.8","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    @m.insert_into_db(result)
+    r = @conn.exec("SELECT * FROM contacts WHERE id = 888")[0]
+    assert_equal 37.419200897217, r["latitude"].to_f
+    assert_equal -122.05740356445, r["longitude"].to_f
+  end
+  
+
+  def test_should_insert_click_and_update_contact_status
+    result = ["1315941774.461","192.168.56.1","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_1) AppleWebKit/535.1 (KHTML, like Gecko) Chrome/13.0.782.220 Safari/535.1","/go/click/999?key=fa2492&url=http%3A//mailee.me%3Fname%3Djohn%26code%3D123"]    
+    @m = Mailee::Click.new("test.log")
+    contact_id = @m.insert_into_db(result)[:contact_id]
+    r = @conn.exec("SELECT * FROM contacts WHERE id = #{contact_id}")[0]
+    assert_equal 4, r["contact_status_id"].to_i
   end
 
   def test_should_not_insert_twice_the_same_click_line
