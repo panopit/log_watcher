@@ -11,9 +11,6 @@ GEM
     eventmachine-tail (0.6.3)
       eventmachine
     geoip-c (0.8.0)
-    metaclass (0.0.1)
-    mocha (0.10.3)
-      metaclass (~> 0.0.1)
     pg (0.11.0)
     rake (0.8.7)
 
@@ -24,7 +21,6 @@ DEPENDENCIES
   eventmachine (~> 0.12.10)
   eventmachine-tail (~> 0.6.3)
   geoip-c (~> 0.8.0)
-  mocha
   pg
   rake
   user_agent_info (= 0.0.1)!
