@@ -1,5 +1,6 @@
+require 'geoip'
+
 class Mailee::Stats < EventMachine::FileTail
-  require 'geokit'
 
   def initialize(path, startpos=-1)
     super(path, startpos)
@@ -8,8 +9,7 @@ class Mailee::Stats < EventMachine::FileTail
     @config = YAML.load_file('config.yml')
     raise 'Could not load config.yml' unless @config
     @conn = PGconn.open(@config['database'])
-    Geokit::Geocoders::request_timeout = 3
-    
+    @geoip = GeoIP::City.new('GeoLiteCity.dat', :filesystem, true)   
   end
 
   def receive_data(data)
@@ -55,14 +55,14 @@ class Mailee::Stats < EventMachine::FileTail
     not u.query.nil?
   end
   # URI.parse(path.split('%2F%3Futm_source')[0])
-  def self.geocode(ip)
-    data = Geokit::Geocoders::GeoPluginGeocoder.ip_geocoder ip
-    Geokit::Geocoders::IpGeocoder.ip_geocoder ip unless data.success?
-    data
+  def self.geocode(ip,geoip)
+    info = geoip.look_up ip 
+    info = {country_code: nil, country_code3: nil, country_name: nil, region: nil, city: nil, latitude: nil, longitude: nil}  unless info
+    info
   end
   def self.update_contact_geoinfo contact_id, geokit, conn
     conn.exec("UPDATE contacts SET latitude = $1, longitude = $2 WHERE id = $3",
-              [geokit.lat, geokit.lng, contact_id]
+              [geokit[:latitude], geokit[:longitude], contact_id]
               )
   end
 end

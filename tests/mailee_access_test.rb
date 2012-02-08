@@ -2,8 +2,6 @@ require 'eventmachine'
 require 'eventmachine-tail'
 require './src/mailee.rb'
 require './tests/helper.rb'
-require 'mocha'
-require 'ostruct'
 
 class MaileeAccessTest < Test::Unit::TestCase
 
@@ -11,11 +9,6 @@ class MaileeAccessTest < Test::Unit::TestCase
     setup_files
     @conn = PGconn.open(@config['database'])
     create_delivery
-    geokit = OpenStruct.new(country_code: nil, city: nil, lat: nil, lng: nil, state:nil )
-    Mailee::Stats.expects(:geokit).with('192.168.56.1').returns(geokit).at_least(0)
-    geokit2 = OpenStruct.new(country_code: 'US', city: 'Mountain View', lat: 37.419200897217, lng: -122.05740356445, state: 'CA' )
-    Mailee::Stats.expects(:geokit).with('8.8.8.8').returns(geokit2).at_least(0)
-    
   end
   def teardown
     delete_delivery
@@ -52,8 +45,8 @@ class MaileeAccessTest < Test::Unit::TestCase
     @m.insert_into_db(result)
     r = @conn.exec("SELECT * FROM accesses WHERE message_id = 999")[0]
     assert_equal "Mountain View", r["city"]
-    assert_equal 37.419200897217, r["latitude"].to_f
-    assert_equal -122.05740356445, r["longitude"].to_f
+    assert_equal 37.4192008972168, r["latitude"].to_f
+    assert_equal -122.05740356445312, r["longitude"].to_f
     assert_equal "US", r["country_code"]
     assert_equal "CA", r["region"]
   end
@@ -68,9 +61,10 @@ class MaileeAccessTest < Test::Unit::TestCase
     assert_equal r["os"], "MacOS"
     assert_equal r["os_version"], "Lion"
     assert_equal "Mountain View", r["city"]
-    assert_equal 37.419200897217, r["latitude"].to_f
-    assert_equal -122.05740356445, r["longitude"].to_f
+    assert_equal 37.4192008972168, r["latitude"].to_f
+    assert_equal -122.05740356445312, r["longitude"].to_f
     assert_equal "US", r["country_code"]
+    assert_equal "USA", r["country_code3"]
     assert_equal "CA", r["region"]
   end
   
@@ -79,8 +73,8 @@ class MaileeAccessTest < Test::Unit::TestCase
     @m = Mailee::Access.new("test.log")
     @m.insert_into_db(result)
     r = @conn.exec("SELECT * FROM contacts WHERE id = 888")[0]
-    assert_equal 37.419200897217, r["latitude"].to_f
-    assert_equal -122.05740356445, r["longitude"].to_f
+    assert_equal 37.4192008972168, r["latitude"].to_f
+    assert_equal -122.05740356445312, r["longitude"].to_f
   end
 
   def test_should_insert_access_and_update_contact_status

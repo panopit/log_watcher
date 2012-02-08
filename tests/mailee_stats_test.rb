@@ -40,12 +40,14 @@ class MaileeStatsTest < Test::Unit::TestCase
 
   # if this test fails, check if the info for 8.8.8.8 have not changed
   def test_should_return_geocode_info
-    r = Mailee::Stats.geocode('8.8.8.8')
-    assert_equal "Mountain View", r.city
-    assert_equal "CA", r.state
-    assert_equal 37.419200897217, r.lat
-    assert_equal -122.05740356445, r.lng
-    assert_equal "US", r.country_code
+    @geoip = GeoIP::City.new('GeoLiteCity.dat', :filesystem, true)       
+    r = Mailee::Stats.geocode('8.8.8.8', @geoip)
+    assert_equal "Mountain View", r[:city]
+    assert_equal "CA", r[:region]
+    assert_equal 37.4192008972168, r[:latitude]
+    assert_equal -122.05740356445312, r[:longitude]
+    assert_equal "US", r[:country_code]
+    assert_equal "USA", r[:country_code3]
   end
 
   def test_should_insert_access_information

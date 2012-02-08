@@ -10,12 +10,10 @@ GEM
     eventmachine (0.12.10)
     eventmachine-tail (0.6.3)
       eventmachine
-    geokit (1.6.5)
-      multi_json
+    geoip-c (0.8.0)
     metaclass (0.0.1)
     mocha (0.10.3)
       metaclass (~> 0.0.1)
-    multi_json (1.0.4)
     pg (0.11.0)
     rake (0.8.7)
 
@@ -25,7 +23,7 @@ PLATFORMS
 DEPENDENCIES
   eventmachine (~> 0.12.10)
   eventmachine-tail (~> 0.6.3)
-  geokit (= 1.6.5)
+  geoip-c (~> 0.8.0)
   mocha
   pg
   rake
