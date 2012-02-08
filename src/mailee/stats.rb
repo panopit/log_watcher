@@ -9,7 +9,7 @@ class Mailee::Stats < EventMachine::FileTail
     @config = YAML.load_file('config.yml')
     raise 'Could not load config.yml' unless @config
     @conn = PGconn.open(@config['database'])
-    @geoip = GeoIP::City.new('GeoLiteCity.dat', :filesystem, true)   
+    @geoip = GeoIP::City.new('GeoLiteCity.dat', :memory, true)   
   end
 
   def receive_data(data)
