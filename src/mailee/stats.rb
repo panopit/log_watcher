@@ -8,6 +8,8 @@ class Mailee::Stats < EventMachine::FileTail
     @config = YAML.load_file('config.yml')
     raise 'Could not load config.yml' unless @config
     @conn = PGconn.open(@config['database'])
+    Geokit::Geocoders::request_timeout = 3
+    
   end
 
   def receive_data(data)
@@ -54,7 +56,9 @@ class Mailee::Stats < EventMachine::FileTail
   end
   # URI.parse(path.split('%2F%3Futm_source')[0])
   def self.geocode(ip)
-    Geokit::Geocoders::GeoPluginGeocoder.do_geocode(ip)
+    data = Geokit::Geocoders::GeoPluginGeocoder.ip_geocoder ip
+    Geokit::Geocoders::IpGeocoder.ip_geocoder ip unless data.success?
+    data
   end
   def self.update_contact_geoinfo contact_id, geokit, conn
     conn.exec("UPDATE contacts SET latitude = $1, longitude = $2 WHERE id = $3",
