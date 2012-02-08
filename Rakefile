@@ -24,6 +24,7 @@ task :test do
   #puts "PROCESSO PAI #{pid}" 
   
   verbose(false) do
+    ENV["test"]="true"  
     Rake.run_tests 'tests/*_test.rb'
   end
   #Process.kill pid    

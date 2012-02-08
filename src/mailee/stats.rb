@@ -9,7 +9,12 @@ class Mailee::Stats < EventMachine::FileTail
     @config = YAML.load_file('config.yml')
     raise 'Could not load config.yml' unless @config
     @conn = PGconn.open(@config['database'])
-    @geoip = GeoIP::City.new('GeoLiteCity.dat', :memory, true)   
+
+    if ENV["test"]
+      @geoip = GeoIP::City.new('GeoLiteCity.dat', :filesystem, true)   
+    else
+      @geoip = GeoIP::City.new('GeoLiteCity.dat', :memory, true)   
+    end
   end
 
   def receive_data(data)
@@ -38,12 +43,22 @@ class Mailee::Stats < EventMachine::FileTail
   end
 
   def self.parse_url(path)
+    CGI::parse(fix_url(path))["url"][0]
+  end
+
+  def self.fix_url path
     begin
       u = URI.parse(path)
     rescue
-      u = URI.parse(path.split('%2F%3Futm_source')[0])
+      if path.include?("%3Futm_source")
+        u = URI.parse(path.split('%3Futm_source')[0])
+      elsif path.include?("%3futm_source")
+        u = URI.parse(path.split('%3futm_source')[0])
+      else
+        u = nil
+      end
     end
-    CGI::parse(u.query)["url"][0]
+    u ? u.query : nil
   end
 
   def self.parse_key(path)
@@ -51,10 +66,9 @@ class Mailee::Stats < EventMachine::FileTail
   end
 
   def self.valid_path?(path)
-      u = URI.parse(path)
-    not u.query.nil?
+      not fix_url(path).nil?
   end
-  # URI.parse(path.split('%2F%3Futm_source')[0])
+
   def self.geocode(ip,geoip)
     info = geoip.look_up ip 
     info = {country_code: nil, country_code3: nil, country_name: nil, region: nil, city: nil, latitude: nil, longitude: nil}  unless info

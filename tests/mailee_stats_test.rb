@@ -30,15 +30,30 @@ class MaileeStatsTest < Test::Unit::TestCase
     p2 = "http://mailee.me/go/click/999"
     assert_equal true, Mailee::Stats.valid_path?(p1)
     assert_equal false, Mailee::Stats.valid_path?(p2)
+    
+    path = "/go/click/93280032?xrl=o4rq00&hey=uggc://jjj.phcbafivc.pbz.oe/fnyinqbe/bsregnfQvn?hgz_fbhepr=Fvgr&hgz_zrqvhz=Znvyrr.zr&hgz_pnzcnvta=Bsregn&hgz_pbagrag=Fbeirgr%2p+Ebqvmvb%2p+Pbzovanqb"
+    assert_equal false, Mailee::Stats.valid_path?(path)
   end
 
   def test_should_rescue_invalid_urls
     path = "/go/click/133233021?key=af298b&amp;url=http%3A%2F%2Forbirh.wordpress.com%2F2011%2F10%2F26%2Fprogramacao-de-janeiro%2F%3Futm_source%3DMailee%26utm_medium%3Demail%26utm_campaign%3DPrograma%25C3%25A7%25C3%25A3o%2B01%252F2012%26utm_term%3"
     assert_equal 133233021, Mailee::Stats.parse_id(path)
-    assert_equal 'http://orbirh.wordpress.com/2011/10/26/programacao-de-janeiro', Mailee::Stats.parse_url(path)
+    assert_equal 'http://orbirh.wordpress.com/2011/10/26/programacao-de-janeiro/', Mailee::Stats.parse_url(path)
+
   end
 
-  # if this test fails, check if the info for 8.8.8.8 have not changed
+  def test_should_parse_strange_urls
+    path = "/go/click/91985531?key=f8c53c&url=http%3A%2F%2Fwww.grupoa.com.br%2Fsite%2Fexatas-sociais-e-aplicadas%2F2%2F99%2F100%2Fdesign.aspx%3Futm_source%3DMailee%26utm_medium%3Demail%26utm_campaign%3D2011%252F10%2B%257C%2BEMM%26utm_term%3"
+    assert_equal 91985531, Mailee::Stats.parse_id(path)
+    assert_equal "http://www.grupoa.com.br/site/exatas-sociais-e-aplicadas/2/99/100/design.aspx", Mailee::Stats.parse_url(path)
+    assert_equal true, Mailee::Stats.valid_path?(path)
+
+    path = "/go/click/120583838?key=93c1dc&amp;url=http%3a%2f%2fwww.mailee.me%2f%3futm_source%3dmailee%26utm_medium%3demail%26utm_campaign%3dbits%2b2011%26utm_term%3d%26utm_content%3d2414s%2b-%2b08%252f08%2b10%252f08%2b26%252f10%2b23%"
+    assert_equal 120583838, Mailee::Stats.parse_id(path)
+    assert_equal "http://www.mailee.me/", Mailee::Stats.parse_url(path)
+    assert_equal true, Mailee::Stats.valid_path?(path)
+  end
+
   def test_should_return_geocode_info
     @geoip = GeoIP::City.new('GeoLiteCity.dat', :filesystem, true)       
     r = Mailee::Stats.geocode('8.8.8.8', @geoip)
